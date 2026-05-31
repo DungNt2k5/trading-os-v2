@@ -4,7 +4,7 @@ export interface CampaignTier {
   label: string | null;
   minDeposit: number;
   requiredVolume: number;
-  holdTime: number; // seconds stored in DB
+  holdTime: number;
   bonus: number;
   maxSlots: number | null;
 }
@@ -16,9 +16,10 @@ export interface CampaignAccount {
   uid: string;
   wallet: string;
   deposit: number;
-  depositTime: string | null; // ISO string
+  depositTime: string | null;
   volume: number;
   note: string | null;
+  crossedBonus: boolean;   // ← NEW: đã chéo bonus thành công chưa
   createdAt: string;
 }
 
@@ -27,7 +28,7 @@ export interface Campaign {
   name: string;
   exchange: string;
   description: string | null;
-  startDate: string; // ISO string
+  startDate: string;
   endDate: string;
   createdAt: string;
   tiers: CampaignTier[];
@@ -44,11 +45,10 @@ export type AccountStatus =
 export interface AccountRow extends CampaignAccount {
   matchedTier: CampaignTier | null;
   status: AccountStatus;
-  timeLeft: number; // seconds
-  volumeProgress: number; // 0–100
+  timeLeft: number;
+  volumeProgress: number;
 }
 
-// For form use — holdTime in hours (UI), not seconds (DB)
 export interface TierFormData {
   label: string;
   minDeposit: number;

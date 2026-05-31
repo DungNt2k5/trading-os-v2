@@ -123,5 +123,6 @@ model CampaignAccount {
   volume      Float     @default(0)
   note        String?
   createdAt   DateTime  @default(now())
+  crossedBonus Boolean  @default(false)
   campaign    Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 }
