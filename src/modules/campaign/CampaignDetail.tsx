@@ -19,6 +19,7 @@ type Tab = "accounts" | "charts";
 export default function CampaignDetail({ campaignId }: Props) {
   const router = useRouter();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [accounts, setAccounts] = useState<CampaignAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -32,9 +33,16 @@ export default function CampaignDetail({ campaignId }: Props) {
       const res = await fetch(`/api/campaign/${campaignId}`);
       const data = await res.json();
       setCampaign(data);
+      setAccounts(data.accounts ?? []);
     } finally {
       setLoading(false);
     }
+  }, [campaignId]);
+
+  const fetchAccounts = useCallback(async () => {
+    const res = await fetch(`/api/campaign/${campaignId}/accounts`);
+    const data = await res.json();
+    setAccounts(data);
   }, [campaignId]);
 
   useEffect(() => { fetchCampaign(); }, [fetchCampaign, refreshKey]);
@@ -45,7 +53,7 @@ export default function CampaignDetail({ campaignId }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, depositTime: data.depositTime || null }),
     });
-    setRefreshKey(k => k + 1);
+    fetchAccounts();
   };
 
   const handleEditCampaign = async (data: CampaignFormData) => {
@@ -243,9 +251,9 @@ export default function CampaignDetail({ campaignId }: Props) {
         {activeTab === "accounts" && (
           <AccountTable
             campaign={campaign}
-            accounts={campaign.accounts}
+            accounts={accounts}
             tiers={campaign.tiers}
-            onAccountsChange={() => setRefreshKey(k => k + 1)}
+            onAccountsChange={fetchAccounts}
           />
         )}
         {activeTab === "charts" && (

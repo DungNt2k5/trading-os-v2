@@ -255,10 +255,20 @@ export default function AccountTable({ campaign, accounts, tiers, onAccountsChan
   const [filterTier, setFTier]      = useState("all");
   const [sortKey, setSortKey]       = useState<SortKey>("index");
   const [sortDir, setSortDir]       = useState<SortDir>("asc");
-  const [page, setPage]             = useState(1);
+  const [page, setPage]             = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`page-${campaign.id}`);
+      return saved ? parseInt(saved, 10) : 1;
+    } catch { return 1; }
+  });
   const [selected, setSelected]     = useState<Set<string>>(new Set());
   const [bulkConfirm, setBulkCfm]   = useState(false);
-  const [hiddenCols, setHidden]     = useState<Set<string>>(new Set(["wallet", "note"]));
+  const [hiddenCols, setHidden]     = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(`hiddenCols-${campaign.id}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set(["wallet", "note"]);
+    } catch { return new Set(["wallet", "note"]); }
+  });
   const [colMenu, setColMenu]       = useState(false);
   const [importOpen, setImport]     = useState(false);
   const [importText, setIText]      = useState("");
@@ -266,8 +276,22 @@ export default function AccountTable({ campaign, accounts, tiers, onAccountsChan
   const [importing, setILoading]    = useState(false);
   const fileRef    = useRef<HTMLInputElement>(null);
   const colMenuRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
-  useEffect(() => { setPage(1); setSelected(new Set()); }, [search, filterStatus, filterTier, sortKey, sortDir]);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setPage(1);
+    setSelected(new Set());
+  }, [search, filterStatus, filterTier, sortKey, sortDir]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`page-${campaign.id}`, String(page));
+    } catch {}
+  }, [page, campaign.id]);
 
   useEffect(() => {
     if (!colMenu) return;
@@ -286,7 +310,25 @@ export default function AccountTable({ campaign, accounts, tiers, onAccountsChan
 
   const filtered = useMemo(() => {
     let r = rows;
-    if (search.trim()) { const q = search.trim().toLowerCase(); r = r.filter(x => x.email.toLowerCase().includes(q) || x.uid.toLowerCase().includes(q) || x.wallet.toLowerCase().includes(q) || (x.note ?? "").toLowerCase().includes(q)); }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+
+      if (q.startsWith("uid:")) {
+        const val = q.slice(4).trim();
+        r = r.filter(x => String(x.uid).toLowerCase().includes(val));
+      } else if (q.startsWith("email:")) {
+        const val = q.slice(6).trim();
+        r = r.filter(x => x.email.toLowerCase().includes(val));
+      } else if (q.startsWith("wallet:")) {
+        const val = q.slice(7).trim();
+        r = r.filter(x => x.wallet.toLowerCase().includes(val));
+      } else {
+        r = r.filter(x =>
+          x.email.toLowerCase().includes(q) ||
+          (x.note ?? "").toLowerCase().includes(q)
+        );
+      }
+    }
     if (filterStatus !== "all") r = r.filter(x => x.status === filterStatus);
     if (filterTier !== "all") r = r.filter(x => x.matchedTier?.id === filterTier);
     return r;
@@ -411,7 +453,7 @@ export default function AccountTable({ campaign, accounts, tiers, onAccountsChan
         {/* Search */}
         <div style={{ position: "relative", flex: "1 1 200px", minWidth: 150 }}>
           <Search size={12} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.22)", pointerEvents: "none" }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm email, UID, wallet..."
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm email... hoặc uid:20 / wallet:0x..."
             style={{ ...INPUT, width: "100%", padding: "8px 30px 8px 30px", boxSizing: "border-box" }} />
           {search && (
             <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", display: "flex", padding: 2 }}>
@@ -447,7 +489,12 @@ export default function AccountTable({ campaign, accounts, tiers, onAccountsChan
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                   <input type="checkbox" checked={!hiddenCols.has(col.key)}
-                    onChange={() => setHidden(p => { const n = new Set(p); n.has(col.key) ? n.delete(col.key) : n.add(col.key); return n; })}
+                    onChange={() => setHidden(p => {
+                      const n = new Set(p);
+                      n.has(col.key) ? n.delete(col.key) : n.add(col.key);
+                      localStorage.setItem(`hiddenCols-${campaign.id}`, JSON.stringify([...n]));
+                      return n;
+                    })}
                     style={{ accentColor: "#22d3ee", width: 13, height: 13 }} />
                   {col.label}
                 </label>
