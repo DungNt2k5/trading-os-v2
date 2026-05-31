@@ -10,7 +10,8 @@ const dbUrl = process.env.DATABASE_URL ?? "file:./dev.db";
 try {
   const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
   if (fs.existsSync(migrationsDir)) {
-    execSync(`npx prisma db push --schema=prisma/schema.prisma --accept-data-loss --url=${dbUrl}`, {
+    const dbUrlClean = dbUrl.replace(/\\/g, "/");
+    execSync(`npx prisma db push --schema=prisma/schema.prisma --accept-data-loss --url=${dbUrlClean}`, {
       stdio: "ignore",
       cwd: process.cwd(),
     });
